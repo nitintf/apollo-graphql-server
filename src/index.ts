@@ -1,3 +1,4 @@
+import session from 'express-session';
 import 'reflect-metadata'
 import { MikroORM } from "@mikro-orm/core";
 import { __node__ } from "./constants";
@@ -7,6 +8,7 @@ import { ApolloServer } from 'apollo-server-express'
 import {buildSchema} from 'type-graphql'
 import { PostResolver } from "./resolvers/post";
 import { UserResolver } from './resolvers/user';
+import { MyContext } from './types';
 
 const main = async () => {
   const orm = await MikroORM.init(mikroOrmConfig)
@@ -14,12 +16,25 @@ const main = async () => {
   
   const app = express()
 
+  app.use(session({
+    secret: 'asdnksdvn239821731jnsdc',
+    resave: false,
+    name: 'qid',
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 365 * 10, //10 years
+      httpOnly: true,
+      secure: __node__, // cookie only works in https
+      sameSite: 'lax' // csrf
+    },
+    saveUninitialized: false
+  }, ))
+
   const apolloServer = new ApolloServer({
     schema: await buildSchema({
       resolvers: [ PostResolver, UserResolver],
       validate: false
     }),
-    context: () => ({ em: orm.em })
+    context: ({req, res}): MyContext => ({ em: orm.em, req, res })
   })
   await apolloServer.start()
   apolloServer.applyMiddleware({app})
