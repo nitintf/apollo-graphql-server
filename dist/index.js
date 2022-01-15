@@ -22,10 +22,15 @@ const apollo_server_express_1 = require("apollo-server-express");
 const type_graphql_1 = require("type-graphql");
 const post_1 = require("./resolvers/post");
 const user_1 = require("./resolvers/user");
+const cors_1 = __importDefault(require("cors"));
 const main = () => __awaiter(void 0, void 0, void 0, function* () {
     const orm = yield core_1.MikroORM.init(mikro_orm_config_1.default);
     yield orm.getMigrator().up();
     const app = (0, express_1.default)();
+    app.use((0, cors_1.default)({
+        origin: 'http://localhost:3000',
+        credentials: true
+    }));
     app.use((0, express_session_1.default)({
         secret: 'asdnksdvn239821731jnsdc',
         resave: false,
@@ -46,7 +51,12 @@ const main = () => __awaiter(void 0, void 0, void 0, function* () {
         context: ({ req, res }) => ({ em: orm.em, req, res })
     });
     yield apolloServer.start();
-    apolloServer.applyMiddleware({ app });
+    apolloServer.applyMiddleware({
+        app,
+        cors: {
+            origin: false
+        }
+    });
     app.listen(4000, () => {
         console.log('Server started on localhost:4000');
     });

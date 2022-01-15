@@ -1,9 +1,8 @@
-import { ObjectType } from 'type-graphql';
+import { ObjectType, Query } from 'type-graphql';
 import { User } from '../entities/User'
 import { MyContext } from '../types'
 import { Resolver, Mutation, InputType, Field, Arg, Ctx } from 'type-graphql'
 import argon2 from "argon2";
-
 @InputType()
 class UsernamePasswordInput {
   @Field(() => String)
@@ -19,7 +18,7 @@ class FieldError {
   field: string
   @Field(() => String)
   message: string
-}
+} 
 
 @ObjectType()
 class UserResponse {
@@ -32,10 +31,25 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+  @Query(() => User, { nullable: true })
+  async me(
+    @Ctx() { req, em }: MyContext
+  ) {
+    // you are not loggged in
+    if (!req.session.userId) {
+      return null
+    }
+
+    const user = await em.findOne(User, {id: req.session.userId})
+
+    return user;
+  }
+
+
   @Mutation(() => UserResponse)
   async register(
     @Arg('options') options: UsernamePasswordInput,
-    @Ctx() {em}: MyContext
+    @Ctx() {em, req}: MyContext
   ): Promise<UserResponse> {
     if (options.username.length <= 2) {
       return {
@@ -51,7 +65,7 @@ export class UserResolver {
       return {
         errors: [
           {
-            field: "username",
+            field: "password",
             message: "length must be greater than 4"
           }
         ]
@@ -81,7 +95,9 @@ export class UserResolver {
       }    
       console.log('message', err.message);
     }
-    
+
+    req.session.userId = user.id
+
     return {
       user
     }
